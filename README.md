@@ -1,6 +1,6 @@
 # AFYA BAND
 
-An affordable wristband that continuously monitors your blood pressure and heart rate, providing real-time health insights to help prevent serious complications
+An affordable wristband that continuously monitors your blood pressure and heart rate, providing real-time health insights to help prevent serious complications.
 
 
 ## Project Overview
