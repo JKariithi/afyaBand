@@ -31,4 +31,10 @@ An affordable wristband that continuously monitors your blood pressure and heart
 | Marcia Kinuthia | UI/UX Designer & Backend Contributor | User flows, wireframes, interface layout, and supporting backend development |
 
 
+## Environment Setup ##
+
+The screenshot shows that the local development environment is correctly set up. Git, Python and Visual Studio Code are installed and working. It also confirms that Git is properly configured with GitHub, successfully committed and pushed changes.
+<img width="1173" height="329" alt="image" src="https://github.com/user-attachments/assets/9a8a40b6-d3ec-41de-a632-4dad211d7cb0" />
+
+
 
