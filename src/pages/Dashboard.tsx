@@ -183,11 +183,17 @@ const Dashboard: React.FC = () => {
             <Activity className="w-5 h-5" />
             Dashboard
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:bg-muted hover:text-card-foreground rounded-xl font-medium transition-colors">
+          <button 
+            onClick={() => navigate('/history')}
+            className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:bg-muted hover:text-card-foreground rounded-xl font-medium transition-colors"
+          >
             <History className="w-5 h-5" />
             History
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:bg-muted hover:text-card-foreground rounded-xl font-medium transition-colors">
+          <button 
+            onClick={() => navigate('/settings')}
+            className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:bg-muted hover:text-card-foreground rounded-xl font-medium transition-colors"
+          >
             <Settings className="w-5 h-5" />
             Settings
           </button>
