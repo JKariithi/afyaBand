@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 import bandImage from "@/assets/band.jpeg";
 
 export const HeroSection = () => {
@@ -25,14 +27,26 @@ export const HeroSection = () => {
               pressure and heart rate, providing real-time health insights to
               help prevent serious complications.
             </p>
-            <Button
-              variant="secondary"
-              size="lg"
-              className="text-lg px-8 py-6 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-              asChild
-            >
-              <a href="#about">Learn More</a>
-            </Button>
+            <div className="flex flex-wrap gap-4">
+              <Button
+                variant="secondary"
+                size="lg"
+                className="text-lg px-8 py-6 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                asChild
+              >
+                <a href="#about">Learn More</a>
+              </Button>
+              <Button
+                size="lg"
+                className="text-lg px-8 py-6 font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
+                asChild
+              >
+                <Link to="/dashboard">
+                  Open Dashboard
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+            </div>
           </motion.div>
 
           {/* Right Image */}
