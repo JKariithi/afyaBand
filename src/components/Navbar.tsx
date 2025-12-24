@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Menu, X, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
@@ -38,24 +39,36 @@ export const Navbar = () => {
         <div className="flex justify-between items-center h-16 md:h-20">
           {/* Logo */}
           <a href="#home" className="flex items-center gap-2">
-            <span className="text-xl md:text-2xl font-bold text-foreground">
+            <div className="w-8 h-8 bg-primary-foreground/20 rounded-lg flex items-center justify-center">
+              <Activity className="text-primary-foreground w-5 h-5" />
+            </div>
+            <span className="text-xl md:text-2xl font-bold text-primary-foreground">
               Afya Band
             </span>
           </a>
 
           {/* Desktop Navigation */}
-          <ul className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <li key={link.href}>
-                <a
-                  href={link.href}
-                  className="text-primary-foreground/90 hover:text-primary-foreground font-medium transition-colors duration-200"
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
-          </ul>
+          <div className="hidden md:flex items-center gap-8">
+            <ul className="flex items-center gap-8">
+              {navLinks.map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    className="text-primary-foreground/90 hover:text-primary-foreground font-medium transition-colors duration-200"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <Button
+              variant="secondary"
+              size="sm"
+              asChild
+            >
+              <Link to="/dashboard">Dashboard</Link>
+            </Button>
+          </div>
 
           {/* Mobile Menu Button */}
           <Button
@@ -88,6 +101,15 @@ export const Navbar = () => {
                   </a>
                 </li>
               ))}
+              <li>
+                <Link
+                  to="/dashboard"
+                  className="block py-2 px-4 bg-secondary text-secondary-foreground rounded-lg font-medium mt-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Open Dashboard
+                </Link>
+              </li>
             </ul>
           </motion.div>
         )}
