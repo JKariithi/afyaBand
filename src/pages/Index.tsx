@@ -1,13 +1,38 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Helmet } from "react-helmet-async";
+import { Navbar } from "@/components/Navbar";
+import { HeroSection } from "@/components/HeroSection";
+import { AboutSection } from "@/components/AboutSection";
+import { HowItWorksSection } from "@/components/HowItWorksSection";
+import { TeamSection } from "@/components/TeamSection";
+import { ContactSection } from "@/components/ContactSection";
+import { Footer } from "@/components/Footer";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <>
+      <Helmet>
+        <title>Afya Band - Smart Health Monitoring Wristband</title>
+        <meta
+          name="description"
+          content="Afya Band is an affordable wristband that continuously monitors your blood pressure and heart rate, providing real-time health insights to help prevent serious complications."
+        />
+        <meta
+          name="keywords"
+          content="health monitoring, wristband, blood pressure, heart rate, health tracker, Nairobi, Kenya, affordable healthcare"
+        />
+        <link rel="canonical" href="https://afyaband.com" />
+      </Helmet>
+
+      <main className="min-h-screen">
+        <Navbar />
+        <HeroSection />
+        <AboutSection />
+        <HowItWorksSection />
+        <TeamSection />
+        <ContactSection />
+        <Footer />
+      </main>
+    </>
   );
 };
 
