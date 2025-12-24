@@ -6,19 +6,72 @@ import { analyzeVitals } from '@/services/healthAnalysisService';
 import VitalCard from '@/components/dashboard/VitalCard';
 import RealTimeChart from '@/components/dashboard/RealTimeChart';
 import InsightPanel from '@/components/dashboard/InsightPanel';
-import { Heart, Activity, Settings, Home, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Heart, Activity, Settings, Home, AlertCircle, CheckCircle2, LogOut, History, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+  
   const [readings, setReadings] = useState<VitalReading[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
   const [insight, setInsight] = useState<HealthInsight | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [savedReadingsCount, setSavedReadingsCount] = useState(0);
 
   // Buffer to hold readings for chart (limit history to 60 seconds for performance)
   const MAX_HISTORY = 60;
+
+  // Save readings to database every 10 readings
+  const saveReadingsToDatabase = useCallback(async (readingsToSave: VitalReading[]) => {
+    if (!user || readingsToSave.length === 0) return;
+
+    try {
+      const { error } = await supabase.from('health_readings').insert(
+        readingsToSave.map(reading => ({
+          user_id: user.id,
+          heart_rate: reading.heartRate,
+          systolic: reading.systolic,
+          diastolic: reading.diastolic,
+          recorded_at: new Date(reading.timestamp).toISOString(),
+        }))
+      );
+
+      if (error) {
+        console.error('Error saving readings:', error);
+      } else {
+        setSavedReadingsCount(prev => prev + readingsToSave.length);
+      }
+    } catch (err) {
+      console.error('Failed to save readings:', err);
+    }
+  }, [user]);
+
+  // Save insight to database
+  const saveInsightToDatabase = useCallback(async (insightToSave: HealthInsight) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase.from('health_insights').insert({
+        user_id: user.id,
+        status: insightToSave.status,
+        summary: insightToSave.summary,
+        recommendation: insightToSave.recommendation,
+        recorded_at: new Date(insightToSave.timestamp).toISOString(),
+      });
+
+      if (error) {
+        console.error('Error saving insight:', error);
+      }
+    } catch (err) {
+      console.error('Failed to save insight:', err);
+    }
+  }, [user]);
 
   const performAnalysis = useCallback(async () => {
     if (readings.length < 5 || isAnalyzing) return;
@@ -26,16 +79,31 @@ const Dashboard: React.FC = () => {
     setIsAnalyzing(true);
     const result = await analyzeVitals(readings);
     setInsight(result);
+    
+    // Save insight to database
+    await saveInsightToDatabase(result);
+    
     setIsAnalyzing(false);
-  }, [readings, isAnalyzing]);
+  }, [readings, isAnalyzing, saveInsightToDatabase]);
 
   // Connect to the mock device
   const toggleConnection = () => {
     if (connectionStatus === ConnectionStatus.CONNECTED) {
       deviceService.disconnect();
       setConnectionStatus(ConnectionStatus.DISCONNECTED);
+      
+      // Save any remaining readings
+      if (readings.length > 0) {
+        saveReadingsToDatabase(readings.slice(-10));
+      }
+      
+      toast({
+        title: 'Monitoring stopped',
+        description: `${savedReadingsCount} readings saved to your account.`,
+      });
     } else {
       setConnectionStatus(ConnectionStatus.CONNECTING);
+      setSavedReadingsCount(0);
 
       // Simulate connection delay
       setTimeout(() => {
@@ -44,11 +112,22 @@ const Dashboard: React.FC = () => {
         deviceService.connect((data) => {
           setReadings(prev => {
             const newReadings = [...prev, data];
+            
+            // Save to database every 10 readings
+            if (newReadings.length % 10 === 0) {
+              saveReadingsToDatabase(newReadings.slice(-10));
+            }
+            
             if (newReadings.length > MAX_HISTORY) {
               return newReadings.slice(newReadings.length - MAX_HISTORY);
             }
             return newReadings;
           });
+        });
+        
+        toast({
+          title: 'Wristband connected',
+          description: 'Live monitoring has started. Your data is being saved.',
         });
       }, 800);
     }
@@ -60,12 +139,15 @@ const Dashboard: React.FC = () => {
     if (connectionStatus === ConnectionStatus.CONNECTED) {
       interval = window.setInterval(() => {
         if (readings.length > 10) {
-          analyzeVitals(readings.slice(-20)).then(res => setInsight(res));
+          analyzeVitals(readings.slice(-20)).then(res => {
+            setInsight(res);
+            saveInsightToDatabase(res);
+          });
         }
-      }, 10000); // Analyze every 10 seconds
+      }, 15000); // Analyze every 15 seconds
     }
     return () => clearInterval(interval);
-  }, [connectionStatus, readings]);
+  }, [connectionStatus, readings, saveInsightToDatabase]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -73,6 +155,12 @@ const Dashboard: React.FC = () => {
       deviceService.disconnect();
     };
   }, []);
+
+  const handleSignOut = async () => {
+    deviceService.disconnect();
+    await signOut();
+    navigate('/');
+  };
 
   const latest = readings.length > 0 ? readings[readings.length - 1] : null;
 
@@ -96,17 +184,47 @@ const Dashboard: React.FC = () => {
             Dashboard
           </button>
           <button className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:bg-muted hover:text-card-foreground rounded-xl font-medium transition-colors">
+            <History className="w-5 h-5" />
+            History
+          </button>
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:bg-muted hover:text-card-foreground rounded-xl font-medium transition-colors">
             <Settings className="w-5 h-5" />
             Settings
           </button>
           <button 
             onClick={() => navigate('/')} 
-            className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:bg-muted hover:text-card-foreground rounded-xl font-medium transition-colors mt-auto"
+            className="w-full flex items-center gap-3 px-4 py-3 text-muted-foreground hover:bg-muted hover:text-card-foreground rounded-xl font-medium transition-colors"
           >
             <Home className="w-5 h-5" />
             Back to Home
           </button>
         </nav>
+
+        {/* User Info */}
+        <div className="p-4 border-t border-border">
+          <div className="flex items-center gap-3 mb-3 p-3 bg-muted rounded-xl">
+            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+              <User className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-card-foreground truncate">
+                {user?.email}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {savedReadingsCount > 0 ? `${savedReadingsCount} readings saved` : 'No readings yet'}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={handleSignOut}
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
 
         <div className="p-4 border-t border-border">
           <div className={cn(
@@ -150,12 +268,15 @@ const Dashboard: React.FC = () => {
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Health Dashboard</h1>
-            <p className="text-muted-foreground">Real-time wristband monitoring & AI analysis</p>
+            <p className="text-muted-foreground">Real-time monitoring & AI analysis • Data syncs automatically</p>
           </div>
           <div className="flex gap-2">
-            <div className="bg-secondary text-secondary-foreground px-3 py-1 rounded text-xs font-bold">
-              Demo Mode
-            </div>
+            {connectionStatus === ConnectionStatus.CONNECTED && (
+              <div className="bg-success/10 text-success px-3 py-1 rounded text-xs font-bold flex items-center gap-1">
+                <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
+                Live
+              </div>
+            )}
           </div>
         </header>
 

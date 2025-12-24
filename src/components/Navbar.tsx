@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Menu, X, Activity } from "lucide-react";
+import { Menu, X, Activity, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navLinks = [
   { href: "#home", label: "Home" },
@@ -15,6 +16,7 @@ const navLinks = [
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +25,10 @@ export const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <motion.nav
@@ -61,13 +67,37 @@ export const Navbar = () => {
                 </li>
               ))}
             </ul>
-            <Button
-              variant="secondary"
-              size="sm"
-              asChild
-            >
-              <Link to="/dashboard">Dashboard</Link>
-            </Button>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  asChild
+                >
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-primary-foreground hover:bg-primary-foreground/10"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                asChild
+              >
+                <Link to="/auth">
+                  <LogIn className="w-4 h-4 mr-1" />
+                  Sign In
+                </Link>
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -102,13 +132,34 @@ export const Navbar = () => {
                 </li>
               ))}
               <li>
-                <Link
-                  to="/dashboard"
-                  className="block py-2 px-4 bg-secondary text-secondary-foreground rounded-lg font-medium mt-2"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Open Dashboard
-                </Link>
+                {user ? (
+                  <div className="flex flex-col gap-2 mt-2">
+                    <Link
+                      to="/dashboard"
+                      className="block py-2 px-4 bg-secondary text-secondary-foreground rounded-lg font-medium text-center"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Open Dashboard
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="block py-2 px-4 text-primary-foreground/90 hover:bg-primary-foreground/10 rounded-lg transition-colors text-center"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    to="/auth"
+                    className="block py-2 px-4 bg-secondary text-secondary-foreground rounded-lg font-medium mt-2 text-center"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                )}
               </li>
             </ul>
           </motion.div>

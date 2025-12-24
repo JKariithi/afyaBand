@@ -2,9 +2,12 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import bandImage from "@/assets/band.jpeg";
 
 export const HeroSection = () => {
+  const { user } = useAuth();
+
   return (
     <section
       id="home"
@@ -41,8 +44,8 @@ export const HeroSection = () => {
                 className="text-lg px-8 py-6 font-semibold bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
                 asChild
               >
-                <Link to="/dashboard">
-                  Open Dashboard
+                <Link to={user ? "/dashboard" : "/auth"}>
+                  {user ? "Open Dashboard" : "Get Started"}
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
