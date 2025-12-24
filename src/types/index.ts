@@ -10,6 +10,18 @@ export interface HealthInsight {
   summary: string;
   recommendation: string;
   timestamp: number;
+  riskScore?: number;
+  factors?: string[];
+  insights?: string;
+  aiGenerated?: boolean;
+}
+
+export interface UserProfile {
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  bmi?: number;
+  weight?: number;
+  height?: number;
 }
 
 export enum ConnectionStatus {
