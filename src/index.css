@@ -10,6 +10,12 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap");
 
+@import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");
+
+@import url("https://fonts.googleapis.com/css2?family=Libre+Caslon+Text&display=swap");
+
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap");
+
 /* AfyaBand Design System - Health-tech aesthetic with vibrant blues */
 
 @layer base {
@@ -104,8 +110,8 @@
     --popover: 0 0% 25%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 27 95% 60%;
-    --primary-foreground: 12 81% 14%;
+    --primary: 217 32.5843% 17.451%;
+    --primary-foreground: 210 40% 98.0392%;
 
     --secondary: 0 0% 45%;
     --secondary-foreground: 0 0% 98%;
@@ -113,8 +119,8 @@
     --muted: 0 0% 45%;
     --muted-foreground: 0 0% 98%;
 
-    --accent: 20 91% 14%;
-    --accent-foreground: 43 96% 56%;
+    --accent: 217 32.5843% 17.451%;
+    --accent-foreground: 215 13.7931% 34.1176%;
 
     --success: 142 76% 42%;
     --success-foreground: 220 25% 8%;
@@ -122,12 +128,12 @@
     --health-pink: 340 80% 70%;
     --health-pink-foreground: 220 25% 8%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 221 39.2857% 10.9804%;
     --destructive-foreground: 0 85% 97%;
 
     --border: 0 0% 32%;
     --input: 0 0% 32%;
-    --ring: 27 95% 60%;
+    --ring: 175 83.8509% 31.5686%;
 
     --sidebar-background: 220 25% 10%;
     --sidebar-foreground: 0 0% 98%;
@@ -137,11 +143,11 @@
     --sidebar-accent-foreground: 20 91% 14%;
     --sidebar-border: 0 0% 32%;
     --sidebar-ring: 27 95% 60%;
-    --chart-1: 30 97% 72%;
-    --chart-2: 45 96% 64%;
-    --chart-3: 48 96% 76%;
-    --chart-4: 27 95% 60%;
-    --chart-5: 0 0% 45%;
+    --chart-1: 192 91.3978% 36.4706%;
+    --chart-2: 193 82.2785% 30.9804%;
+    --chart-3: 194 69.5652% 27.0588%;
+    --chart-4: 196 63.6364% 23.7255%;
+    --chart-5: 197 78.9474% 14.902%;
     --sidebar: 0 0% 14%;
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
