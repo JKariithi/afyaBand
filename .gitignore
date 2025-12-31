@@ -1,2 +1,22 @@
-# git to ignore the following file
+# git to ignore the following files and folders
 myenv/
+shadow/
+.env/
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+*.log
+*.egg-info/
+*.bak
+*.swp
+*.swo
+*.tmp
+*.~
+.envrc
+.idea/
+.vscode/
