@@ -1,11 +1,12 @@
 import { Helmet } from "react-helmet-async";
-import { Navbar } from "@/components/Navbar";
-import { HeroSection } from "@/components/HeroSection";
-import { AboutSection } from "@/components/AboutSection";
-import { HowItWorksSection } from "@/components/HowItWorksSection";
-import { TeamSection } from "@/components/TeamSection";
-import { ContactSection } from "@/components/ContactSection";
-import { Footer } from "@/components/Footer";
+import { Navbar, Footer } from "@/shared/components";
+import { 
+  HeroSection, 
+  AboutSection, 
+  HowItWorksSection, 
+  TeamSection, 
+  ContactSection 
+} from "@/features/landing";
 
 const Index = () => {
   return (
