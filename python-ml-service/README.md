@@ -1,112 +1,125 @@
 # AfyaBand ML Prediction Service
 
-A FastAPI microservice that loads trained Random Forest and XGBoost models for hypertension risk prediction.
+A Python microservice that loads trained Random Forest and XGBoost models for hypertension risk prediction.
+
+## Project Structure
+
+```
+python-ml-service/
+├── app/
+│   ├── __init__.py           # Package initialization
+│   ├── main.py               # FastAPI application entry point
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── routes.py         # API endpoint definitions
+│   ├── core/
+│   │   ├── __init__.py
+│   │   └── config.py         # Application configuration
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── predictor.py      # ML model loading & prediction
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   └── health.py         # Pydantic request/response schemas
+│   └── services/
+│       ├── __init__.py
+│       └── health_analyzer.py # Health insight interpretation
+├── ml_models/                 # Place your .pkl model files here
+│   └── .gitkeep
+├── Dockerfile
+├── requirements.txt
+└── README.md
+```
 
 ## Setup
 
 ### 1. Add Your Model Files
 
-Copy your trained models from the `machine-learning` branch:
+Copy your trained models to the `ml_models/` directory:
+- `random_forest_model.pkl`
+- `xgboost_model.pkl`
+
+### 2. Install Dependencies
 
 ```bash
-mkdir models
-cp /path/to/random_forest_model.pkl models/
-cp /path/to/xgboost_model.pkl models/
-```
-
-### 2. Local Development
-
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+cd python-ml-service
 pip install -r requirements.txt
-
-# Run the service
-python main.py
 ```
 
-The service will be available at `http://localhost:8000`
-
-### 3. Test the API
+### 3. Run Locally
 
 ```bash
-# Health check
-curl http://localhost:8000/
+# From the python-ml-service directory
+python -m app.main
 
-# Make a prediction
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "readings": [
-      {"heartRate": 75, "systolic": 130, "diastolic": 85, "timestamp": 1704067200000}
-    ],
-    "userProfile": {"age": 45, "gender": "male", "bmi": 26.5},
-    "model": "random_forest"
-  }'
-```
-
-## Deploy to Railway
-
-1. Create a [Railway](https://railway.app) account
-2. Create a new project → "Deploy from GitHub repo"
-3. Connect your repository and select the `python-ml-service` directory
-4. Railway will auto-detect Python and deploy
-
-Or use Railway CLI:
-
-```bash
-railway login
-railway init
-railway up
-```
-
-## Deploy to Render
-
-1. Create a [Render](https://render.com) account
-2. New → Web Service → Connect your GitHub repo
-3. Set:
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-
-## Deploy to Fly.io
-
-```bash
-flyctl launch
-flyctl deploy
+# Or using uvicorn directly
+uvicorn app.main:app --reload --port 8000
 ```
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Service info and model status |
-| `/health` | GET | Health check |
-| `/predict` | POST | Single model prediction |
-| `/predict/ensemble` | POST | Ensemble prediction (both models) |
+### GET `/`
+Service info and model status
 
-## Important Notes
+### GET `/health`
+Health check for deployment platforms
 
-### Feature Engineering
+### POST `/predict`
+Single model prediction
 
-The `calculate_features()` function in `main.py` needs to match the features your models were trained on. Check your `notebooks/models.ipynb` to see the exact feature order and update accordingly.
-
-### Model Compatibility
-
-Ensure scikit-learn and xgboost versions match what was used for training. If you get pickle errors, you may need to retrain with compatible versions.
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | 8000 |
-
-## After Deployment
-
-Once deployed, update your edge function with the service URL:
-
+```json
+{
+  "readings": [
+    {"heartRate": 75, "systolic": 130, "diastolic": 85, "timestamp": 1234567890}
+  ],
+  "userProfile": {"age": 45, "gender": "male", "bmi": 26.5},
+  "model": "random_forest"
+}
 ```
-ML_SERVICE_URL=https://your-service.railway.app
+
+### POST `/predict/ensemble`
+Combined prediction from all available models
+
+## Deployment
+
+### Docker
+
+```bash
+docker build -t afyaband-ml .
+docker run -p 8000:8000 afyaband-ml
 ```
+
+### Railway / Render / Fly.io
+
+1. Push this directory to a Git repository
+2. Connect to your deployment platform
+3. Set the root directory to `python-ml-service`
+4. The platform will auto-detect the Dockerfile
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | 8000 | Server port |
+| `HOST` | 0.0.0.0 | Server host |
+| `DEBUG` | false | Enable debug mode |
+| `MODELS_DIR` | ./ml_models | Path to model files |
+
+## Feature Engineering
+
+The predictor extracts these features from vital readings:
+
+- `avg_systolic` - Average systolic blood pressure
+- `avg_diastolic` - Average diastolic blood pressure  
+- `avg_heart_rate` - Average heart rate
+- `age` - User age (default: 45)
+- `bmi` - Body Mass Index (default: 25.0)
+- `gender_male` - Gender encoding (1 for male, 0 for female)
+- `pulse_pressure` - Systolic minus diastolic
+- `hr_variability` - Heart rate standard deviation
+
+**Important**: Adjust the feature order in `app/models/predictor.py` to match your model's training!
+
+## Integration with Edge Function
+
+Once deployed, add your service URL to the Lovable project secrets as `ML_SERVICE_URL`, then update the edge function to call your Python service.
