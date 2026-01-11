@@ -20,6 +20,41 @@ export interface MLPredictionResult extends HealthInsight {
 }
 
 /**
+ * Fetch user profile from database for ML predictions
+ */
+async function fetchUserProfile(): Promise<UserProfile | undefined> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return undefined;
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('age, bmi, gender, height, weight')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!data) return undefined;
+
+    // Calculate BMI from height/weight if bmi is not set
+    let bmi = data.bmi;
+    if (!bmi && data.height && data.weight) {
+      bmi = data.weight / Math.pow(data.height / 100, 2);
+    }
+
+    const gender = data.gender as 'male' | 'female' | 'other' | undefined;
+
+    return {
+      age: data.age ?? undefined,
+      bmi: bmi ?? undefined,
+      gender
+    };
+  } catch (err) {
+    console.error('Failed to fetch user profile:', err);
+    return undefined;
+  }
+}
+
+/**
  * ML-powered hypertension risk prediction service
  * 
  * Uses trained XGBoost model to predict hypertension risk 
@@ -29,8 +64,7 @@ export interface MLPredictionResult extends HealthInsight {
  * features: Age, BMI, Systolic_BP, Diastolic_BP, Heart_Rate, Gender
  */
 export const predictHypertensionRisk = async (
-  readings: VitalReading[],
-  userProfile?: UserProfile
+  readings: VitalReading[]
 ): Promise<MLPredictionResult> => {
   if (readings.length === 0) {
     return {
@@ -47,6 +81,9 @@ export const predictHypertensionRisk = async (
       version: '1.0.0'
     };
   }
+
+  // Auto-fetch user profile from database
+  const userProfile = await fetchUserProfile();
 
   try {
     const { data, error } = await supabase.functions.invoke('ml-predict', {
