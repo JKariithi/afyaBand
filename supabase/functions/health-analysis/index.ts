@@ -6,16 +6,16 @@ const corsHeaders = {
 };
 
 interface VitalReading {
-  heartRate: number;
-  systolic: number;
-  diastolic: number;
-  timestamp: number;
+  HeartRate: number;
+  Systolic: number;
+  Diastolic: number;
+  Timestamp: number;
 }
 
 interface UserProfile {
-  age?: number;
-  gender?: string;
-  bmi?: number;
+  Age?: number;
+  Gender?: string;
+  BMI?: number;
 }
 
 serve(async (req) => {
