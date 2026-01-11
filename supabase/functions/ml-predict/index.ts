@@ -21,26 +21,22 @@ interface UserProfile {
 interface PredictionRequest {
   readings: VitalReading[];
   userProfile?: UserProfile;
-  model?: 'random_forest' | 'xgboost' | 'ensemble';
+  model?: 'xgboost';
 }
 
 /**
  * ML Model Predictor for Hypertension Risk
  * 
- * This is a JavaScript implementation of the trained ML models from the 
- * AfyaBand machine-learning branch. The original models were trained on
+ * This is a JavaScript implementation of the trained XGBoost model from the 
+ * AfyaBand machine-learning branch. The original model was trained on
  * a hypertension dataset with the following features:
  * - Age, BMI, Systolic_BP, Diastolic_BP, Heart_Rate, Gender
  * 
- * The models (RandomForest and XGBoost) achieved high accuracy by learning
- * patterns from 8,835 records with ~72% positive hypertension cases.
- * 
- * This implementation replicates the decision boundaries and feature
- * importance weights derived from the trained models.
+ * The XGBoost model achieved high accuracy by learning patterns from 
+ * 8,835 records with ~72% positive hypertension cases.
  */
 
 // Training data statistics for StandardScaler normalization
-// Calculated from the training notebook's dataset
 const SCALER_PARAMS = {
   Age: { mean: 54.5, std: 18.2 },
   BMI: { mean: 27.5, std: 6.8 },
@@ -48,16 +44,6 @@ const SCALER_PARAMS = {
   Diastolic_BP: { mean: 82.0, std: 15.2 },
   Heart_Rate: { mean: 72.0, std: 12.5 },
   Gender: { mean: 0.5, std: 0.5 }
-};
-
-// Feature importance weights derived from the trained Random Forest model
-const RF_FEATURE_WEIGHTS = {
-  Age: 0.18,
-  BMI: 0.14,
-  Systolic_BP: 0.28,  // Highest importance
-  Diastolic_BP: 0.22,
-  Heart_Rate: 0.12,
-  Gender: 0.06
 };
 
 // XGBoost learned thresholds and coefficients
@@ -91,65 +77,6 @@ function scaleFeature(value: number, featureName: keyof typeof SCALER_PARAMS): n
  */
 function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-x));
-}
-
-/**
- * Random Forest prediction simulation
- * Uses feature weights and thresholds learned from training
- */
-function predictRandomForest(features: Record<string, number>): { prediction: number; probability: number } {
-  // Normalize features
-  const scaled = {
-    Age: scaleFeature(features.Age, 'Age'),
-    BMI: scaleFeature(features.BMI, 'BMI'),
-    Systolic_BP: scaleFeature(features.Systolic_BP, 'Systolic_BP'),
-    Diastolic_BP: scaleFeature(features.Diastolic_BP, 'Diastolic_BP'),
-    Heart_Rate: scaleFeature(features.Heart_Rate, 'Heart_Rate'),
-    Gender: scaleFeature(features.Gender, 'Gender')
-  };
-
-  // Calculate weighted score based on feature importance
-  let score = 0;
-  for (const [feature, weight] of Object.entries(RF_FEATURE_WEIGHTS)) {
-    score += scaled[feature as keyof typeof scaled] * weight;
-  }
-
-  // Apply blood pressure thresholds (critical decision boundaries from training)
-  let riskMultiplier = 1.0;
-  
-  // Stage 2 Hypertension
-  if (features.Systolic_BP >= 140 || features.Diastolic_BP >= 90) {
-    riskMultiplier = 1.8;
-  } 
-  // Stage 1 Hypertension  
-  else if (features.Systolic_BP >= 130 || features.Diastolic_BP >= 80) {
-    riskMultiplier = 1.4;
-  }
-  // Normal/Elevated
-  else if (features.Systolic_BP >= 120) {
-    riskMultiplier = 1.15;
-  }
-
-  // Age factor
-  if (features.Age >= 60) {
-    riskMultiplier *= 1.2;
-  } else if (features.Age >= 45) {
-    riskMultiplier *= 1.1;
-  }
-
-  // BMI factor
-  if (features.BMI >= 30) {
-    riskMultiplier *= 1.25;
-  } else if (features.BMI >= 25) {
-    riskMultiplier *= 1.1;
-  }
-
-  // Calculate probability
-  const adjustedScore = score * riskMultiplier;
-  const probability = sigmoid(adjustedScore + 0.3);
-  const prediction = probability >= 0.5 ? 1 : 0;
-
-  return { prediction, probability };
 }
 
 /**
@@ -339,9 +266,9 @@ serve(async (req) => {
   }
 
   try {
-    const { readings, userProfile, model = 'ensemble' } = await req.json() as PredictionRequest;
+    const { readings, userProfile } = await req.json() as PredictionRequest;
 
-    console.log(`ML Predict request: ${readings?.length || 0} readings, model: ${model}`);
+    console.log(`ML Predict request: ${readings?.length || 0} readings, model: xgboost`);
 
     if (!readings || readings.length === 0) {
       return new Response(JSON.stringify({
@@ -361,38 +288,20 @@ serve(async (req) => {
     const features = extractFeatures(readings, userProfile);
     console.log('Extracted features:', features);
 
-    let result: Record<string, unknown>;
+    // Use XGBoost model only
+    const { prediction, probability } = predictXGBoost(features);
+    const result = interpretPrediction(prediction, probability, 'xgboost', features);
 
-    if (model === 'random_forest') {
-      const { prediction, probability } = predictRandomForest(features);
-      result = interpretPrediction(prediction, probability, 'random_forest', features);
-    } else if (model === 'xgboost') {
-      const { prediction, probability } = predictXGBoost(features);
-      result = interpretPrediction(prediction, probability, 'xgboost', features);
-    } else {
-      // Ensemble: average predictions from both models
-      const rfResult = predictRandomForest(features);
-      const xgbResult = predictXGBoost(features);
-      
-      const ensembleProbability = (rfResult.probability + xgbResult.probability) / 2;
-      const ensemblePrediction = ensembleProbability >= 0.5 ? 1 : 0;
-      
-      result = {
-        ...interpretPrediction(ensemblePrediction, ensembleProbability, 'ensemble', features),
-        individualResults: {
-          random_forest: {
-            prediction: rfResult.prediction,
-            probability: Math.round(rfResult.probability * 1000) / 1000
-          },
-          xgboost: {
-            prediction: xgbResult.prediction,
-            probability: Math.round(xgbResult.probability * 1000) / 1000
-          }
-        }
-      };
+    console.log(`XGBoost prediction: probability=${probability.toFixed(3)}`);
 
-      console.log(`Ensemble prediction: RF=${rfResult.probability.toFixed(3)}, XGB=${xgbResult.probability.toFixed(3)}, Avg=${ensembleProbability.toFixed(3)}`);
-    }
+    return new Response(JSON.stringify({
+      ...result,
+      timestamp: Date.now(),
+      mlGenerated: true,
+      version: '1.1.0'
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 
     return new Response(JSON.stringify({
       ...result,
