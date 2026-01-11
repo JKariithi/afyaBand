@@ -18,20 +18,27 @@ const Settings: React.FC = () => {
   const { toast } = useToast();
   const [fullName, setFullName] = useState('');
   const [age, setAge] = useState<string>('');
-  const [bmi, setBmi] = useState<string>('');
+  const [height, setHeight] = useState<string>('');
+  const [weight, setWeight] = useState<string>('');
   const [gender, setGender] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [notifyAbnormal, setNotifyAbnormal] = useState(true);
   const [notifyWeekly, setNotifyWeekly] = useState(false);
 
+  // Calculate BMI from height (cm) and weight (kg)
+  const calculatedBmi = height && weight 
+    ? (parseFloat(weight) / Math.pow(parseFloat(height) / 100, 2)).toFixed(1)
+    : null;
+
   useEffect(() => {
     const loadProfile = async () => {
       if (!user) return;
-      const { data } = await supabase.from('profiles').select('full_name, age, bmi, gender').eq('id', user.id).single();
+      const { data } = await supabase.from('profiles').select('full_name, age, height, weight, gender').eq('id', user.id).single();
       if (data) {
         setFullName(data.full_name || '');
         setAge(data.age?.toString() || '');
-        setBmi(data.bmi?.toString() || '');
+        setHeight(data.height?.toString() || '');
+        setWeight(data.weight?.toString() || '');
         setGender(data.gender || '');
       }
     };
@@ -41,10 +48,15 @@ const Settings: React.FC = () => {
   const handleSaveProfile = async () => {
     if (!user) return;
     setLoading(true);
+    const bmiValue = height && weight 
+      ? parseFloat((parseFloat(weight) / Math.pow(parseFloat(height) / 100, 2)).toFixed(1))
+      : null;
     const { error } = await supabase.from('profiles').update({ 
       full_name: fullName,
       age: age ? parseInt(age) : null,
-      bmi: bmi ? parseFloat(bmi) : null,
+      height: height ? parseFloat(height) : null,
+      weight: weight ? parseFloat(weight) : null,
+      bmi: bmiValue,
       gender: gender || null
     }).eq('id', user.id);
     toast(error ? { title: 'Error', description: 'Failed to update profile.', variant: 'destructive' } : { title: 'Profile updated' });
@@ -78,9 +90,9 @@ const Settings: React.FC = () => {
             <CardDescription>Personalize predictions with your health data</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Age</Label>
+                <Label>Age (years)</Label>
                 <Input 
                   type="number" 
                   min="1" 
@@ -88,18 +100,6 @@ const Settings: React.FC = () => {
                   value={age} 
                   onChange={(e) => setAge(e.target.value)} 
                   placeholder="e.g. 30" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>BMI</Label>
-                <Input 
-                  type="number" 
-                  step="0.1" 
-                  min="10" 
-                  max="60"
-                  value={bmi} 
-                  onChange={(e) => setBmi(e.target.value)} 
-                  placeholder="e.g. 24.5" 
                 />
               </div>
               <div className="space-y-2">
@@ -114,6 +114,39 @@ const Settings: React.FC = () => {
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Height (cm)</Label>
+                <Input 
+                  type="number" 
+                  min="50" 
+                  max="250"
+                  value={height} 
+                  onChange={(e) => setHeight(e.target.value)} 
+                  placeholder="e.g. 175" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Weight (kg)</Label>
+                <Input 
+                  type="number" 
+                  min="20" 
+                  max="300"
+                  step="0.1"
+                  value={weight} 
+                  onChange={(e) => setWeight(e.target.value)} 
+                  placeholder="e.g. 70" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>BMI (calculated)</Label>
+                <div className="h-10 px-3 py-2 rounded-md border border-input bg-muted flex items-center">
+                  <span className={calculatedBmi ? 'text-foreground' : 'text-muted-foreground'}>
+                    {calculatedBmi || 'Enter height & weight'}
+                  </span>
+                </div>
               </div>
             </div>
             <p className="text-sm text-muted-foreground">
