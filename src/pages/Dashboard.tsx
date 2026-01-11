@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VitalReading, HealthInsight, ConnectionStatus } from '@/shared/types';
-import { deviceService, analyzeVitals } from '@/shared/services';
+import { VitalReading, HealthInsight, ConnectionStatus, UserProfile } from '@/shared/types';
+import { deviceService, analyzeVitals, predictHypertensionRisk, MLPredictionResult } from '@/shared/services';
 import { VitalCard, RealTimeChart, InsightPanel } from '@/features/dashboard';
 import { Heart, Activity, Settings, Home, AlertCircle, CheckCircle2, LogOut, History, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,17 @@ const Dashboard: React.FC = () => {
   const [readings, setReadings] = useState<VitalReading[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
   const [insight, setInsight] = useState<HealthInsight | null>(null);
+  const [mlPrediction, setMlPrediction] = useState<MLPredictionResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showMLPrediction, setShowMLPrediction] = useState(false);
   const [savedReadingsCount, setSavedReadingsCount] = useState(0);
+  
+  // User profile for ML predictions (can be set from settings)
+  const [userProfile] = useState<UserProfile>({
+    age: 45,
+    gender: 'male',
+    bmi: 25.0
+  });
 
   const MAX_HISTORY = 60;
 
@@ -59,11 +68,34 @@ const Dashboard: React.FC = () => {
   const performAnalysis = useCallback(async () => {
     if (readings.length < 5 || isAnalyzing) return;
     setIsAnalyzing(true);
-    const result = await analyzeVitals(readings);
+    setShowMLPrediction(false);
+    const result = await analyzeVitals(readings, userProfile);
     setInsight(result);
     await saveInsightToDatabase(result);
     setIsAnalyzing(false);
-  }, [readings, isAnalyzing, saveInsightToDatabase]);
+  }, [readings, isAnalyzing, saveInsightToDatabase, userProfile]);
+
+  const performMLPrediction = useCallback(async () => {
+    if (readings.length < 5 || isAnalyzing) return;
+    setIsAnalyzing(true);
+    setShowMLPrediction(true);
+    try {
+      const result = await predictHypertensionRisk(readings, userProfile, 'ensemble');
+      setMlPrediction(result);
+      toast({
+        title: 'ML Prediction Complete',
+        description: `Risk: ${result.riskScore}% (${result.model})`,
+      });
+    } catch (err) {
+      console.error('ML prediction failed:', err);
+      toast({
+        title: 'ML Prediction Failed',
+        description: 'Using fallback analysis',
+        variant: 'destructive'
+      });
+    }
+    setIsAnalyzing(false);
+  }, [readings, isAnalyzing, userProfile, toast]);
 
   const toggleConnection = () => {
     if (connectionStatus === ConnectionStatus.CONNECTED) {
@@ -169,7 +201,16 @@ const Dashboard: React.FC = () => {
             <RealTimeChart title="Heart Rate Trend" data={readings} dataKey="heartRate" color="hsl(var(--health-pink))" unit="bpm" />
             <RealTimeChart title="Blood Pressure" data={readings} dataKey={['systolic', 'diastolic']} color={['hsl(var(--primary))', '#6366f1']} unit="mmHg" />
           </div>
-          <div className="lg:col-span-1"><InsightPanel insight={insight} isLoading={isAnalyzing} onAnalyze={performAnalysis} /></div>
+          <div className="lg:col-span-1">
+            <InsightPanel 
+              insight={insight} 
+              mlPrediction={mlPrediction}
+              isLoading={isAnalyzing} 
+              onAnalyze={performAnalysis}
+              onMLPredict={performMLPrediction}
+              showMLPrediction={showMLPrediction}
+            />
+          </div>
         </div>
       </main>
     </div>

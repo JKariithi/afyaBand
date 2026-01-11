@@ -2,3 +2,6 @@ project_id = "dgncydvqkwpejpfhfrnx"
 
 [functions.health-analysis]
 verify_jwt = false
+
+[functions.ml-predict]
+verify_jwt = false
