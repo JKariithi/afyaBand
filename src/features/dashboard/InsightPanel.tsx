@@ -1,17 +1,28 @@
 import React from 'react';
 import { HealthInsight } from '@/shared/types';
-import { Brain, AlertCircle, CheckCircle2, Sparkles, TrendingUp } from 'lucide-react';
+import { Brain, AlertCircle, CheckCircle2, Sparkles, TrendingUp, Cpu, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { MLPredictionResult } from '@/shared/services/mlPredictionService';
 
 interface InsightPanelProps {
   insight: HealthInsight | null;
+  mlPrediction?: MLPredictionResult | null;
   isLoading: boolean;
   onAnalyze: () => void;
+  onMLPredict?: () => void;
+  showMLPrediction?: boolean;
 }
 
-const InsightPanel: React.FC<InsightPanelProps> = ({ insight, isLoading, onAnalyze }) => {
+const InsightPanel: React.FC<InsightPanelProps> = ({ 
+  insight, 
+  mlPrediction,
+  isLoading, 
+  onAnalyze,
+  onMLPredict,
+  showMLPrediction = false
+}) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'critical': return 'bg-destructive/10 border-destructive/20 text-destructive';
@@ -42,39 +53,69 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ insight, isLoading, onAnaly
     return 'Low Risk';
   };
 
+  // Use ML prediction as the active data if available and showMLPrediction is true
+  const activeInsight = showMLPrediction && mlPrediction ? mlPrediction : insight;
+  const isMLMode = showMLPrediction && mlPrediction?.mlGenerated;
+
   return (
     <div className="bg-card rounded-2xl shadow-card border border-border p-6 flex flex-col h-full">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/10 rounded-lg text-primary">
-            <Brain className="w-5 h-5" />
+          <div className={cn(
+            "p-2 rounded-lg",
+            isMLMode ? "bg-accent/20 text-accent-foreground" : "bg-primary/10 text-primary"
+          )}>
+            {isMLMode ? <Cpu className="w-5 h-5" /> : <Brain className="w-5 h-5" />}
           </div>
           <div>
             <h3 className="font-bold text-card-foreground flex items-center gap-1.5">
-              AI Health Analyst
-              {insight?.aiGenerated && (
+              {isMLMode ? 'ML Risk Predictor' : 'AI Health Analyst'}
+              {isMLMode && (
+                <GitBranch className="w-4 h-4 text-accent-foreground" />
+              )}
+              {!isMLMode && insight?.aiGenerated && (
                 <Sparkles className="w-4 h-4 text-primary" />
               )}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {insight?.aiGenerated ? 'AI-Powered Analysis' : 'Real-time Analysis'}
+              {isMLMode 
+                ? `${mlPrediction?.model === 'ensemble' ? 'Ensemble (RF + XGBoost)' : mlPrediction?.model === 'random_forest' ? 'Random Forest' : 'XGBoost'}`
+                : insight?.aiGenerated ? 'AI-Powered Analysis' : 'Real-time Analysis'}
             </p>
           </div>
         </div>
-        <Button
-          onClick={onAnalyze}
-          disabled={isLoading}
-          size="sm"
-          className={cn(
-            "transition-all",
-            isLoading && "opacity-50 cursor-not-allowed"
+        <div className="flex gap-2">
+          {onMLPredict && (
+            <Button
+              onClick={onMLPredict}
+              disabled={isLoading}
+              size="sm"
+              variant={showMLPrediction ? "default" : "outline"}
+              className={cn(
+                "transition-all text-xs",
+                isLoading && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <Cpu className="w-3 h-3 mr-1" />
+              ML
+            </Button>
           )}
-        >
-          {isLoading ? 'Analyzing...' : 'Refresh'}
-        </Button>
+          <Button
+            onClick={onAnalyze}
+            disabled={isLoading}
+            size="sm"
+            variant={!showMLPrediction ? "default" : "outline"}
+            className={cn(
+              "transition-all",
+              isLoading && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {isLoading ? 'Analyzing...' : 'AI'}
+          </Button>
+        </div>
       </div>
 
-      {!insight ? (
+      {!activeInsight ? (
         <div className="flex-grow flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-border rounded-xl">
           <Brain className="w-10 h-10 text-muted-foreground/50 mb-3" />
           <p className="text-muted-foreground mb-2">No analysis yet.</p>
@@ -82,8 +123,32 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ insight, isLoading, onAnaly
         </div>
       ) : (
         <div className="flex-grow flex flex-col gap-4">
+          {/* ML Model Comparison - show when using ensemble */}
+          {isMLMode && mlPrediction?.individualResults && (
+            <div className="bg-accent/10 rounded-xl p-3 border border-accent/20">
+              <div className="flex items-center gap-2 mb-2">
+                <GitBranch className="w-4 h-4 text-accent-foreground" />
+                <span className="text-xs font-semibold text-accent-foreground">Model Predictions</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-background/50 rounded-lg p-2">
+                  <span className="text-muted-foreground">Random Forest:</span>
+                  <span className="ml-1 font-bold">
+                    {(mlPrediction.individualResults.random_forest.probability * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="bg-background/50 rounded-lg p-2">
+                  <span className="text-muted-foreground">XGBoost:</span>
+                  <span className="ml-1 font-bold">
+                    {(mlPrediction.individualResults.xgboost.probability * 100).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Risk Score */}
-          {insight.riskScore !== undefined && (
+          {activeInsight.riskScore !== undefined && (
             <div className="bg-muted/50 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -92,54 +157,54 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ insight, isLoading, onAnaly
                 </div>
                 <span className={cn(
                   "text-xs font-bold px-2 py-1 rounded-full",
-                  insight.riskScore >= 70 ? "bg-destructive/10 text-destructive" :
-                  insight.riskScore >= 40 ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" :
+                  activeInsight.riskScore >= 70 ? "bg-destructive/10 text-destructive" :
+                  activeInsight.riskScore >= 40 ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" :
                   "bg-success/10 text-success"
                 )}>
-                  {getRiskLabel(insight.riskScore)}
+                  {getRiskLabel(activeInsight.riskScore)}
                 </span>
               </div>
               <div className="relative">
                 <Progress 
-                  value={insight.riskScore} 
+                  value={activeInsight.riskScore} 
                   className="h-3"
                 />
                 <div 
-                  className={cn("absolute top-0 left-0 h-3 rounded-full transition-all", getRiskColor(insight.riskScore))}
-                  style={{ width: `${insight.riskScore}%` }}
+                  className={cn("absolute top-0 left-0 h-3 rounded-full transition-all", getRiskColor(activeInsight.riskScore))}
+                  style={{ width: `${activeInsight.riskScore}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-2 text-right">{insight.riskScore}%</p>
+              <p className="text-xs text-muted-foreground mt-2 text-right">{activeInsight.riskScore}%</p>
             </div>
           )}
 
           {/* Status Card */}
-          <div className={cn("rounded-xl border p-4", getStatusColor(insight.status))}>
+          <div className={cn("rounded-xl border p-4", getStatusColor(activeInsight.status))}>
             <div className="flex items-center gap-3 mb-3">
-              {getStatusIcon(insight.status)}
-              <span className="font-bold uppercase tracking-wider text-xs">{insight.status} Status</span>
+              {getStatusIcon(activeInsight.status)}
+              <span className="font-bold uppercase tracking-wider text-xs">{activeInsight.status} Status</span>
               <span className="ml-auto text-xs opacity-70">
-                {new Date(insight.timestamp).toLocaleTimeString()}
+                {new Date(activeInsight.timestamp).toLocaleTimeString()}
               </span>
             </div>
 
             <div className="mb-3">
               <h4 className="text-sm font-semibold opacity-80 mb-1">Assessment</h4>
-              <p className="text-sm font-medium leading-snug">{insight.summary}</p>
+              <p className="text-sm font-medium leading-snug">{activeInsight.summary}</p>
             </div>
 
             <div>
               <h4 className="text-sm font-semibold opacity-80 mb-1">Recommendation</h4>
-              <p className="leading-relaxed opacity-90 text-sm">{insight.recommendation}</p>
+              <p className="leading-relaxed opacity-90 text-sm">{activeInsight.recommendation}</p>
             </div>
           </div>
 
           {/* Risk Factors */}
-          {insight.factors && insight.factors.length > 0 && (
+          {activeInsight.factors && activeInsight.factors.length > 0 && (
             <div className="bg-muted/30 rounded-xl p-4">
               <h4 className="text-sm font-semibold text-card-foreground mb-2">Contributing Factors</h4>
               <div className="flex flex-wrap gap-2">
-                {insight.factors.map((factor, idx) => (
+                {activeInsight.factors.map((factor, idx) => (
                   <span 
                     key={idx} 
                     className="text-xs bg-background border border-border px-2 py-1 rounded-full text-muted-foreground"
@@ -151,10 +216,31 @@ const InsightPanel: React.FC<InsightPanelProps> = ({ insight, isLoading, onAnaly
             </div>
           )}
 
+          {/* ML Feature Summary */}
+          {isMLMode && mlPrediction?.features && (
+            <div className="bg-muted/20 rounded-xl p-3 border border-border">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Input Features</h4>
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="text-center">
+                  <span className="block text-muted-foreground">Age</span>
+                  <span className="font-medium">{mlPrediction.features.age}</span>
+                </div>
+                <div className="text-center">
+                  <span className="block text-muted-foreground">BMI</span>
+                  <span className="font-medium">{mlPrediction.features.bmi.toFixed(1)}</span>
+                </div>
+                <div className="text-center">
+                  <span className="block text-muted-foreground">Gender</span>
+                  <span className="font-medium capitalize">{mlPrediction.features.gender}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Additional Insights */}
-          {insight.insights && (
+          {activeInsight.insights && (
             <div className="text-xs text-muted-foreground italic border-t border-border pt-3 mt-auto">
-              {insight.insights}
+              {activeInsight.insights}
             </div>
           )}
         </div>
