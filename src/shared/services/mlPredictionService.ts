@@ -1,7 +1,7 @@
 import { VitalReading, HealthInsight, UserProfile } from '@/shared/types';
 import { supabase } from '@/integrations/supabase/client';
 
-export type MLModel = 'random_forest' | 'xgboost' | 'ensemble';
+export type MLModel = 'xgboost';
 
 export interface MLPredictionResult extends HealthInsight {
   prediction: number;
@@ -15,10 +15,6 @@ export interface MLPredictionResult extends HealthInsight {
     heartRate: number;
     gender: string;
   };
-  individualResults?: {
-    random_forest: { prediction: number; probability: number };
-    xgboost: { prediction: number; probability: number };
-  };
   mlGenerated: boolean;
   version: string;
 }
@@ -26,16 +22,15 @@ export interface MLPredictionResult extends HealthInsight {
 /**
  * ML-powered hypertension risk prediction service
  * 
- * Uses trained Random Forest and XGBoost models to predict
- * hypertension risk based on vital readings and user profile.
+ * Uses trained XGBoost model to predict hypertension risk 
+ * based on vital readings and user profile.
  * 
- * Models were trained on the AfyaBand hypertension dataset with
+ * Model was trained on the AfyaBand hypertension dataset with
  * features: Age, BMI, Systolic_BP, Diastolic_BP, Heart_Rate, Gender
  */
 export const predictHypertensionRisk = async (
   readings: VitalReading[],
-  userProfile?: UserProfile,
-  model: MLModel = 'ensemble'
+  userProfile?: UserProfile
 ): Promise<MLPredictionResult> => {
   if (readings.length === 0) {
     return {
@@ -57,8 +52,7 @@ export const predictHypertensionRisk = async (
     const { data, error } = await supabase.functions.invoke('ml-predict', {
       body: { 
         readings,
-        userProfile,
-        model
+        userProfile
       }
     });
 
@@ -79,7 +73,6 @@ export const predictHypertensionRisk = async (
       probability: data.probability,
       model: data.model,
       features: data.features,
-      individualResults: data.individualResults,
       mlGenerated: data.mlGenerated ?? true,
       version: data.version || '1.0.0'
     };
@@ -161,27 +154,3 @@ function getFallbackPrediction(readings: VitalReading[]): MLPredictionResult {
     insights: 'Fallback prediction - ML service unavailable.'
   };
 }
-
-/**
- * Compare predictions from different models
- */
-export const compareModelPredictions = async (
-  readings: VitalReading[],
-  userProfile?: UserProfile
-): Promise<{
-  randomForest: MLPredictionResult;
-  xgboost: MLPredictionResult;
-  ensemble: MLPredictionResult;
-}> => {
-  const [rf, xgb, ensemble] = await Promise.all([
-    predictHypertensionRisk(readings, userProfile, 'random_forest'),
-    predictHypertensionRisk(readings, userProfile, 'xgboost'),
-    predictHypertensionRisk(readings, userProfile, 'ensemble')
-  ]);
-
-  return {
-    randomForest: rf,
-    xgboost: xgb,
-    ensemble
-  };
-};

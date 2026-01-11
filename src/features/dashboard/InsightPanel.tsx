@@ -1,6 +1,6 @@
 import React from 'react';
 import { HealthInsight } from '@/shared/types';
-import { Brain, AlertCircle, CheckCircle2, Sparkles, TrendingUp, Cpu, GitBranch } from 'lucide-react';
+import { Brain, AlertCircle, CheckCircle2, Sparkles, TrendingUp, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -70,16 +70,13 @@ const InsightPanel: React.FC<InsightPanelProps> = ({
           <div>
             <h3 className="font-bold text-card-foreground flex items-center gap-1.5">
               {isMLMode ? 'ML Risk Predictor' : 'AI Health Analyst'}
-              {isMLMode && (
-                <GitBranch className="w-4 h-4 text-accent-foreground" />
-              )}
               {!isMLMode && insight?.aiGenerated && (
                 <Sparkles className="w-4 h-4 text-primary" />
               )}
             </h3>
             <p className="text-xs text-muted-foreground">
               {isMLMode 
-                ? `${mlPrediction?.model === 'ensemble' ? 'Ensemble (RF + XGBoost)' : mlPrediction?.model === 'random_forest' ? 'Random Forest' : 'XGBoost'}`
+                ? 'XGBoost Model'
                 : insight?.aiGenerated ? 'AI-Powered Analysis' : 'Real-time Analysis'}
             </p>
           </div>
@@ -123,30 +120,6 @@ const InsightPanel: React.FC<InsightPanelProps> = ({
         </div>
       ) : (
         <div className="flex-grow flex flex-col gap-4">
-          {/* ML Model Comparison - show when using ensemble */}
-          {isMLMode && mlPrediction?.individualResults && (
-            <div className="bg-accent/10 rounded-xl p-3 border border-accent/20">
-              <div className="flex items-center gap-2 mb-2">
-                <GitBranch className="w-4 h-4 text-accent-foreground" />
-                <span className="text-xs font-semibold text-accent-foreground">Model Predictions</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-background/50 rounded-lg p-2">
-                  <span className="text-muted-foreground">Random Forest:</span>
-                  <span className="ml-1 font-bold">
-                    {(mlPrediction.individualResults.random_forest.probability * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="bg-background/50 rounded-lg p-2">
-                  <span className="text-muted-foreground">XGBoost:</span>
-                  <span className="ml-1 font-bold">
-                    {(mlPrediction.individualResults.xgboost.probability * 100).toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Risk Score */}
           {activeInsight.riskScore !== undefined && (
             <div className="bg-muted/50 rounded-xl p-4">

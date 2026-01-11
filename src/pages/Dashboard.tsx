@@ -80,7 +80,7 @@ const Dashboard: React.FC = () => {
     setIsAnalyzing(true);
     setShowMLPrediction(true);
     try {
-      const result = await predictHypertensionRisk(readings, userProfile, 'ensemble');
+      const result = await predictHypertensionRisk(readings, userProfile);
       setMlPrediction(result);
       toast({
         title: 'ML Prediction Complete',
