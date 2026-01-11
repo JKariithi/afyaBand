@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VitalReading, HealthInsight, ConnectionStatus, UserProfile } from '@/shared/types';
+import { VitalReading, HealthInsight, ConnectionStatus } from '@/shared/types';
 import { deviceService, analyzeVitals, predictHypertensionRisk, MLPredictionResult } from '@/shared/services';
 import { VitalCard, RealTimeChart, InsightPanel } from '@/features/dashboard';
 import { Heart, Activity, Settings, Home, AlertCircle, CheckCircle2, LogOut, History, User } from 'lucide-react';
@@ -23,12 +23,6 @@ const Dashboard: React.FC = () => {
   const [showMLPrediction, setShowMLPrediction] = useState(false);
   const [savedReadingsCount, setSavedReadingsCount] = useState(0);
   
-  // User profile for ML predictions (can be set from settings)
-  const [userProfile] = useState<UserProfile>({
-    age: 45,
-    gender: 'male',
-    bmi: 25.0
-  });
 
   const MAX_HISTORY = 60;
 
@@ -69,18 +63,18 @@ const Dashboard: React.FC = () => {
     if (readings.length < 5 || isAnalyzing) return;
     setIsAnalyzing(true);
     setShowMLPrediction(false);
-    const result = await analyzeVitals(readings, userProfile);
+    const result = await analyzeVitals(readings);
     setInsight(result);
     await saveInsightToDatabase(result);
     setIsAnalyzing(false);
-  }, [readings, isAnalyzing, saveInsightToDatabase, userProfile]);
+  }, [readings, isAnalyzing, saveInsightToDatabase]);
 
   const performMLPrediction = useCallback(async () => {
     if (readings.length < 5 || isAnalyzing) return;
     setIsAnalyzing(true);
     setShowMLPrediction(true);
     try {
-      const result = await predictHypertensionRisk(readings, userProfile);
+      const result = await predictHypertensionRisk(readings);
       setMlPrediction(result);
       toast({
         title: 'ML Prediction Complete',
@@ -95,7 +89,7 @@ const Dashboard: React.FC = () => {
       });
     }
     setIsAnalyzing(false);
-  }, [readings, isAnalyzing, userProfile, toast]);
+  }, [readings, isAnalyzing, toast]);
 
   const toggleConnection = () => {
     if (connectionStatus === ConnectionStatus.CONNECTED) {

@@ -2,12 +2,43 @@ import { VitalReading, HealthInsight, UserProfile } from '@/shared/types';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
+ * Fetch user profile from database for AI analysis
+ */
+async function fetchUserProfile(): Promise<UserProfile | undefined> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return undefined;
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('age, bmi, gender, height, weight')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!data) return undefined;
+
+    let bmi = data.bmi;
+    if (!bmi && data.height && data.weight) {
+      bmi = data.weight / Math.pow(data.height / 100, 2);
+    }
+
+    return {
+      age: data.age ?? undefined,
+      bmi: bmi ?? undefined,
+      gender: data.gender as 'male' | 'female' | 'other' | undefined
+    };
+  } catch (err) {
+    console.error('Failed to fetch user profile:', err);
+    return undefined;
+  }
+}
+
+/**
  * AI-powered health analysis service
  * Uses Lovable AI via edge function for intelligent hypertension risk assessment
  */
 export const analyzeVitals = async (
-  recentReadings: VitalReading[], 
-  userProfile?: UserProfile
+  recentReadings: VitalReading[]
 ): Promise<HealthInsight> => {
   if (recentReadings.length === 0) {
     return {
@@ -20,6 +51,9 @@ export const analyzeVitals = async (
       aiGenerated: false
     };
   }
+
+  // Auto-fetch user profile from database
+  const userProfile = await fetchUserProfile();
 
   try {
     const { data, error } = await supabase.functions.invoke('health-analysis', {
